@@ -167,6 +167,69 @@ def test2():
     cv2.waitKey(0)
 
 
+def test3():
+    """ flyChara """
+    ### const
+    N = 3
+    H, W = 210*N, 297*N # 変換後のサイズ
+    th = 150 # 文字抽出時の閾値
+
+    img = cv2.imread("./data/DSC_0014.JPG")
+    imgH, imgW = img.shape[:2]
+    print(imgH, imgW)
+
+    ### 紙領域の抽出
+    # ４角の検出(省略)
+    corners = [[1077, 751], [2179, 749], [872, 1088], [2409, 1082]]
+    # 射影変換
+    per1 = np.float32(corners)
+    per2 = np.float32([[0,0], [W,0], [0,H], [W,H]])
+    mat12 = cv2.getPerspectiveTransform(per1, per2) # 1->2
+    paper = cv2.warpPerspective(img, mat12, (W,H))
+
+    ### 文字の抽出
+    paper_gray = cv2.cvtColor(paper, cv2.COLOR_BGR2GRAY)
+    chars = paper.copy()
+    chars[paper_gray > th] = 0
+    ### 文字のインペイント
+    paper_back = paper.copy()
+    paper_ave = np.average(paper[paper_gray>th], axis=0)
+    for i in range(3):
+        paper_back[:, :, i] = paper_ave[i]
+
+    ### 背景画像の作成(文字を動かすシーン画像)
+    # 変換した紙背景を逆変換
+    mat21 = cv2.getPerspectiveTransform(per2, per1) # 2->1
+    paper_back_img = cv2.warpPerspective(paper_back, mat21, (imgW,imgH))
+    # シーンに挿入
+    print((paper_back_img[:, :, i] != 0).shape)
+    back = img.copy()
+    print(back.shape, back[:, :, 0].shape)
+    for i in range(3):
+        back_i, pbg_i = back[:, :, i], paper_back_img[:, :, i]
+        back_i[pbg_i != 0] = pbg_i[pbg_i != 0]
+        back[:, :, i] = back_i
+    
+    cv2.imshow("camera", img)
+    cv2.imshow("paper", paper)
+    cv2.imshow("chars", chars)
+    cv2.imshow("paper_back", paper_back)
+    cv2.imshow("paper_back_camera", paper_back_img)
+    cv2.imshow("back", back)
+
+    cv2.waitKey(0)
+
+
+    
+
+    
+
+
+    return
+
+
+
+
 
 ##########################
 ########## MAIN ##########
@@ -174,4 +237,5 @@ def test2():
 if __name__ == '__main__':
     #test0()
     #test1()
-    test2()
+    #test2()
+    test3()
