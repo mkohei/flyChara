@@ -176,7 +176,6 @@ def test3():
 
     img = cv2.imread("./data/DSC_0014.JPG")
     imgH, imgW = img.shape[:2]
-    print(imgH, imgW)
 
     ### 紙領域の抽出
     # ４角の検出(省略)
@@ -201,21 +200,34 @@ def test3():
     # 変換した紙背景を逆変換
     mat21 = cv2.getPerspectiveTransform(per2, per1) # 2->1
     paper_back_img = cv2.warpPerspective(paper_back, mat21, (imgW,imgH))
-    # シーンに挿入
-    print((paper_back_img[:, :, i] != 0).shape)
+    # 背景シーンに挿入
     back = img.copy()
-    print(back.shape, back[:, :, 0].shape)
     for i in range(3):
         back_i, pbg_i = back[:, :, i], paper_back_img[:, :, i]
         back_i[pbg_i != 0] = pbg_i[pbg_i != 0]
         back[:, :, i] = back_i
-    
+
+    ### 文字の挿入
+    # 良い感じに射影変換(動きの作成)
+    per_c = np.float32([[872, 500], [2409, 500], [872, 1088], [2409, 1088]])
+    mat_c = cv2.getPerspectiveTransform(per2, per_c)
+    chars_scene = cv2.warpPerspective(chars, mat_c, (imgW, imgH))
+    # 背景シーンに挿入
+    scene = back.copy()
+    for i in range(3):
+        scene_i, charsS_i = scene[:, :, i], chars_scene[:, :, i]
+        scene_i[charsS_i != 0] = charsS_i[charsS_i != 0]
+        scene[:, :, i] = scene_i
+
+
     cv2.imshow("camera", img)
-    cv2.imshow("paper", paper)
-    cv2.imshow("chars", chars)
-    cv2.imshow("paper_back", paper_back)
-    cv2.imshow("paper_back_camera", paper_back_img)
-    cv2.imshow("back", back)
+    #cv2.imshow("paper", paper)
+    #cv2.imshow("chars", chars)
+    #cv2.imshow("paper_back", paper_back)
+    #cv2.imshow("paper_back_camera", paper_back_img)
+    #cv2.imshow("back", back)
+    #cv2.imshow("chars_scene", chars_scene)
+    cv2.imshow("scene", scene)
 
     cv2.waitKey(0)
 
