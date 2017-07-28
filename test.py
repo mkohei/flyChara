@@ -394,6 +394,134 @@ def textmove(movePoint, beforeImg, fream):#移動先座標，移動前座標，�
 
     return
 
+    inpkt = [-1,-1,-1,-1]
+    inpktPoint = [[],[],[],[]]
+    #global per2, chars, back, imgW, imgH
+    #per2, chars, back, imgW, imgHはグローバルで指定をお願いします。
+    def animeFream(corners, getFream):
+        global inpkt
+        global inpktPoint
+        cornerUpW = corners[1][0] - corners[0][0]    #上辺の幅
+        cornerDownW = corners[3][0] - corners[2][0]  #下辺の幅
+        cornerLeftH = corners[2][1] - corners[0][1]  #左辺の高さ
+        cornerRightH = corners[3][1] - corners[1][1] #右辺の高さ
+        freamSet = [40,80,120,160]
+        if getFream < freamSet[0]:
+            #-----左から右に縮む動き-----
+            BupRight = [corners[0][0] , corners[0][1]]
+            BupLeft =  [corners[1][0] , corners[1][1]]
+            BdownRight = [corners[2][0] , corners[2][1]]
+            BdownLeft = [corners[3][0] , corners[3][1]]
+            AupRight = [corners[0][0]+cornerUpW*0.7 , corners[0][1]+cornerLeftH*0.1]
+            AupLeft =  [corners[1][0] , corners[1][1]]
+            AdownRight = [corners[2][0]+cornerDownW*0.7 , corners[2][1]-cornerRightH*0.1]
+            AdownLeft = [corners[3][0] , corners[3][1]]
+            moveSelect = 0;
+            moveFream = freamSet[0];
+        elif getFream < freamSet[1] and getFream >= freamSet[0]:
+            #-----右から左に伸びる動き-----
+            BupRight = [corners[0][0]+cornerUpW*0.7 , corners[0][1]+cornerLeftH*0.1]
+            BupLeft =  [corners[1][0] , corners[1][1]]
+            BdownRight = [corners[2][0]+cornerDownW*0.7 , corners[2][1]-cornerRightH*0.1]
+            BdownLeft = [corners[3][0] , corners[3][1]]
+            AupRight = [0 , corners[0][1]-cornerLeftH*0.1]
+            AupLeft =  [corners[1][0] , corners[1][1]]
+            AdownRight = [0 , corners[2][1]+cornerLeftH*0.1]
+            AdownLeft = [corners[3][0] , corners[3][1]]
+            moveSelect = 1;
+            moveFream = freamSet[1] - freamSet[0];
+        elif getFream < freamSet[2] and getFream >= freamSet[1]:
+            #-----左から右に反転する動き-----
+            BupRight = [0 , corners[0][1]-cornerLeftH*0.1]
+            BupLeft =  [corners[1][0] , corners[1][1]]
+            BdownRight = [0 , corners[2][1]+cornerLeftH*0.1]
+            BdownLeft = [corners[3][0] , corners[3][1]]
+            AupRight = [corners[0][0] , corners[0][1]-cornerLeftH*0.3]
+            AupLeft =  [0 , corners[1][1]]
+            AdownRight = [corners[2][0] , corners[2][1]+cornerLeftH*0.3]
+            AdownLeft = [0, corners[3][1]]
+            moveSelect = 2;
+            moveFream = freamSet[2] - freamSet[1];
+        elif getFream < freamSet[3] and getFream >= freamSet[2]:
+            #-----画面にへばりつく動き-----
+            BupRight = [corners[0][0] , corners[0][1]-cornerLeftH*0.3]
+            BupLeft =  [0 , corners[1][1]]
+            BdownRight = [corners[2][0] , corners[2][1]+cornerLeftH*0.3]
+            BdownLeft = [0, corners[3][1]]
+            AupRight = [0, 0]
+            AupLeft =  [imgW , 0]
+            AdownRight = [imgW*0.2 , imgH]
+            AdownLeft = [imgW*0.8, corners[3][1]]
+            moveSelect = 3;
+            moveFream = freamSet[3] - freamSet[2];
+
+
+        beforeImg = np.float32([BupRight, BupLeft, BdownRight, BdownLeft])
+        movePoint = np.float32([AupRight, AupLeft, AdownRight, AdownLeft])
+        mv = movePoint - beforeImg
+        oneMv = mv/moveFream
+        if (inpkt[moveSelect] == -1):
+            if (beforeImg[0][0] <= beforeImg[1][0] and movePoint[0][0] >= movePoint[1][0] or\
+            beforeImg[2][0] <= beforeImg[3][0] and movePoint[2][0] >= movePoint[3][0]  ):
+                for f in range(moveFream):
+                    if ( beforeImg[0][0]+(oneMv[0][0]*f) >= beforeImg[1][0]+(oneMv[1][0]*f) ):
+                        inpkt[moveSelect]  = f
+                        inp = (beforeImg[1][0] + beforeImg[0][0])/2
+                        inpktPoint[moveSelect] = np.float32([ [inp,movePoint[0][1]],[inp,movePoint[1][1]],\
+                        [inp,movePoint[2][1]],[inp,movePoint[3][1]] ])
+                        break
+                    if (beforeImg[2][0]+(oneMv[2][0]*f) >= beforeImg[3][0]+(oneMv[3][0]*f) ):
+                        inpkt[moveSelect]  = f
+                        inp = (beforeImg[2][0] + beforeImg[3][0])/2
+                        inpktPoint[moveSelect] = np.float32([ [inp,movePoint[0][1]],[inp,movePoint[1][1]],\
+                        [inp,movePoint[2][1]],[inp,movePoint[3][1]] ])
+                        break
+                if (inpkt[moveSelect] == -1):
+                    inpkt[moveSelect] = 0
+            elif(beforeImg[0][0] >= beforeImg[1][0] and movePoint[0][0] <= movePoint[1][0] or\
+            beforeImg[2][0] >= beforeImg[3][0] and movePoint[2][0] <= movePoint[3][0]  ):
+                for f in range(moveFream):
+                    if ( beforeImg[0][0]+(oneMv[0][0]*f) <= beforeImg[1][0]+(oneMv[1][0]*f) ):
+                        inpkt[moveSelect]  = f
+                        inp = (beforeImg[1][0] + beforeImg[0][0])/2
+                        inpktPoint[moveSelect] = np.float32([ [inp,movePoint[0][1]],[inp,movePoint[1][1]],\
+                        [inp,movePoint[2][1]],[inp,movePoint[3][1]] ])
+                        break
+                    if (beforeImg[2][0]+(oneMv[2][0]*f) <= beforeImg[3][0]+(oneMv[3][0]*f) ):
+                        inpkt[moveSelect]  = f
+                        inp = (beforeImg[2][0] + beforeImg[3][0])/2
+                        inpktPoint[moveSelect] = np.float32([ [inp,movePoint[0][1]],[inp,movePoint[1][1]],\
+                        [inp,movePoint[2][1]],[inp,movePoint[3][1]] ])
+                        break
+                if (inpkt[moveSelect] == -1):
+                    inpkt[moveSelect] = 0
+            else:
+                inpkt[moveSelect] = 0
+        blockFream = freamSet[moveSelect] - moveFream
+        if (inpkt[moveSelect] != 0):
+            #inp = inpktPoint[moveSelect, :, :]
+            inst = inpktPoint[moveSelect]
+            mv = inst - beforeImg
+            oneMv = mv/inpkt[moveSelect]
+        if (getFream-blockFream > inpkt[moveSelect] and inpkt[moveSelect] != 0):
+            beforeImg = np.float32(beforeImg + oneMv*(getFream-blockFream))
+            mv = movePoint - beforeImg
+            oneMv = mv/(moveFream-inpkt[moveSelect])
+        if (getFream-blockFream <= inpkt[moveSelect] and inpkt[moveSelect] != 0):
+            per_c = np.float32(beforeImg + oneMv*(getFream-blockFream))
+        else:
+            per_c = np.float32(beforeImg + oneMv*(getFream-blockFream-inpkt[moveSelect] ))
+        #per_c = np.float32(beforeImg + oneMv*(getFream-blockFream))
+        mat_c = cv2.getPerspectiveTransform(per2, per_c)
+        chars_scene = cv2.warpPerspective(chars, mat_c, (imgW, imgH))
+        # 背景シーンに挿入
+        scene = back.copy()
+        for i in range(3):
+            scene_i, charsS_i = scene[:, :, i], chars_scene[:, :, i]
+            scene_i[charsS_i != 0] = charsS_i[charsS_i != 0]
+            scene[:, :, i] = scene_i
+        return scene
+
 ##########################
 ########## MAIN ##########
 ##########################
