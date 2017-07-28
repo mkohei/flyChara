@@ -325,8 +325,62 @@ def test4():
 def textmove(movePoint, beforeImg, fream):#移動先座標，移動前座標，フレーム数
     mv = movePoint - beforeImg
     oneMv = mv/fream
+    inpkt = 0
+    inpktPoint = 0
+    inpktMv = 0
+    oneInpktMv = 0
+    if (beforeImg[0][0] <= beforeImg[1][0] and movePoint[0][0] >= movePoint[1][0] or\
+    beforeImg[2][0] <= beforeImg[3][0] and movePoint[2][0] >= movePoint[3][0]  ):
+        for f in range(fream):
+            if ( beforeImg[0][0]+(oneMv[0][0]*f) >= beforeImg[1][0]+(oneMv[1][0]*f) ):
+                inpkt = f
+                inp = (beforeImg[1][0] + beforeImg[0][0])/2
+                inpktPoint = np.float32([ [inp,movePoint[0][1]],[inp,movePoint[1][1]],\
+                [inp,movePoint[2][1]],[inp,movePoint[3][1]] ])
+                break
+            if (beforeImg[2][0]+(oneMv[2][0]*f) >= beforeImg[3][0]+(oneMv[3][0]*f) ):
+                inpkt = f
+                inp = (beforeImg[2][0] + beforeImg[3][0])/2
+                inpktPoint = np.float32([ [inp,movePoint[0][1]],[inp,movePoint[1][1]],\
+                [inp,movePoint[2][1]],[inp,movePoint[3][1]] ])
+                break
+    elif(beforeImg[0][0] >= beforeImg[1][0] and movePoint[0][0] <= movePoint[1][0] or\
+    beforeImg[2][0] >= beforeImg[3][0] and movePoint[2][0] <= movePoint[3][0]  ):
+        for f in range(fream):
+            if ( beforeImg[0][0]+(oneMv[0][0]*f) <= beforeImg[1][0]+(oneMv[1][0]*f) ):
+                inpkt = f
+                inp = (beforeImg[1][0] + beforeImg[0][0])/2
+                inpktPoint = np.float32([ [inp,movePoint[0][1]],[inp,movePoint[1][1]],\
+                [inp,movePoint[2][1]],[inp,movePoint[3][1]] ])
+                break
+            if (beforeImg[2][0]+(oneMv[2][0]*f) <= beforeImg[3][0]+(oneMv[3][0]*f) ):
+                inpkt = f
+                inp = (beforeImg[2][0] + beforeImg[3][0])/2
+                inpktPoint = np.float32([ [inp,movePoint[0][1]],[inp,movePoint[1][1]],\
+                [inp,movePoint[2][1]],[inp,movePoint[3][1]] ])
+                break
+    if (inpkt != 0):
+        mv = inpktPoint - beforeImg
+        oneMv = mv/inpkt
+
     for f in range(fream):
-        per_c = np.float32(beforeImg + oneMv*f)
+        if (f == inpkt+1 and f !=0):
+            beforeImg = per_c
+            mv = movePoint - per_c
+            oneMv = mv/(fream-inpkt)
+        if (f <= inpkt and inpkt != 0):
+            per_c = np.float32(beforeImg + oneMv*(f))
+        else:
+            per_c = np.float32(beforeImg + oneMv*(f-inpkt))
+
+        if ( (per_c[0][0]<=per_c[1][0]+10 and per_c[2][0]>=per_c[3][0]-10) or (per_c[0][0]>=per_c[1][0] and per_c[2][0]-10<=per_c[3][0]+10) ):
+            cv2.imshow("scene", back)
+            continue
+
+        if ( (per_c[0][1]<=per_c[2][1] and per_c[1][1]>=per_c[3][1]) or (per_c[0][1]>=per_c[2][1] and per_c[1][1]<=per_c[3][1]) ):
+            cv2.imshow("scene", back)
+            continue
+
         mat_c = cv2.getPerspectiveTransform(per2, per_c)
         chars_scene = cv2.warpPerspective(chars, mat_c, (imgW, imgH))
         # 背景シーンに挿入
@@ -337,9 +391,8 @@ def textmove(movePoint, beforeImg, fream):#移動先座標，移動前座標，�
             scene[:, :, i] = scene_i
         cv2.imshow("scene", scene)
         cv2.waitKey(1)
+
     return
-
-
 
 ##########################
 ########## MAIN ##########
