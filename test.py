@@ -232,14 +232,112 @@ def test3():
     cv2.waitKey(0)
 
 
-    
 
-    
+
+
 
 
     return
 
+def test4():
+    global per2, chars, back, imgW, imgH
+    """ flyChara """
+    ### const
+    N = 3
+    H, W = 210*N, 297*N # 変換後のサイズ
+    th = 150 # 文字抽出時の閾値
 
+    img = cv2.imread("./data/DSC_0014.JPG")
+    imgH, imgW = img.shape[:2]
+
+    ### 紙領域の抽出
+    # ４角の検出(省略)
+    corners = [[1077, 751], [2179, 749], [872, 1088], [2409, 1082]]
+    # 射影変換
+    per1 = np.float32(corners)
+    per2 = np.float32([[0,0], [W,0], [0,H], [W,H]])
+    mat12 = cv2.getPerspectiveTransform(per1, per2) # 1->2
+    paper = cv2.warpPerspective(img, mat12, (W,H))
+    ### 文字の抽出
+    paper_gray = cv2.cvtColor(paper, cv2.COLOR_BGR2GRAY)
+    chars = paper.copy()
+    chars[paper_gray > th] = 0
+    ### 文字のインペイント
+    paper_back = paper.copy()
+    paper_ave = np.average(paper[paper_gray>th], axis=0)
+    for i in range(3):
+        paper_back[:, :, i] = paper_ave[i]
+    ### 背景画像の作成(文字を動かすシーン画像)
+    # 変換した紙背景を逆変換
+    mat21 = cv2.getPerspectiveTransform(per2, per1) # 2->1
+    paper_back_img = cv2.warpPerspective(paper_back, mat21, (imgW,imgH))
+    # 背景シーンに挿入
+    back = img.copy()
+    for i in range(3):
+        back_i, pbg_i = back[:, :, i], paper_back_img[:, :, i]
+        back_i[pbg_i != 0] = pbg_i[pbg_i != 0]
+        back[:, :, i] = back_i
+
+    # 紙の辺の長さ
+    cornerUpW = corners[1][0] - corners[0][0]    #上辺の幅
+    cornerDownW = corners[3][0] - corners[2][0]  #下辺の幅
+    cornerLeftH = corners[2][1] - corners[0][1]  #左辺の高さ
+    cornerRightH = corners[3][1] - corners[1][1] #右辺の高さ
+
+    beforeImg = corners #動かす前の画像をコピー
+    #-----左から右に縮む動き-----
+    upRight = [corners[0][0]+cornerUpW*0.7 , corners[0][1]+cornerLeftH*0.1]
+    upLeft =  [corners[1][0] , corners[1][1]]
+    downRight = [corners[2][0]+cornerDownW*0.7 , corners[2][1]-cornerRightH*0.1]
+    downLeft = [corners[3][0] , corners[3][1]]
+    movePoint = np.float32([upRight, upLeft, downRight, downLeft]) #移動先の座標指定
+    textmove(movePoint, beforeImg, 40) #移動先座標，移動前座標，フレーム数
+    beforeImg = movePoint #座標の更新
+    #-----右から左に伸びる動き-----
+    upRight = [0 , corners[0][1]-cornerLeftH*0.1]
+    upLeft =  [corners[1][0] , corners[1][1]]
+    downRight = [0 , corners[2][1]+cornerLeftH*0.1]
+    downLeft = [corners[3][0] , corners[3][1]]
+    movePoint = np.float32([upRight, upLeft, downRight, downLeft])
+    textmove(movePoint, beforeImg, 40) #移動先座標，移動前座標，フレーム数
+    beforeImg = movePoint #座標の更新
+    #-----左から右に反転する動き-----
+    upRight = [corners[0][0] , corners[0][1]-cornerLeftH*0.3]
+    upLeft =  [0 , corners[1][1]]
+    downRight = [corners[2][0] , corners[2][1]+cornerLeftH*0.3]
+    downLeft = [0, corners[3][1]]
+    movePoint = np.float32([upRight, upLeft, downRight, downLeft])
+    textmove(movePoint, beforeImg, 40) #移動先座標，移動前座標，フレーム数
+    beforeImg = movePoint #座標の更新
+    #-----画面にへばりつく動き-----
+    upRight = [0, 0]
+    upLeft =  [imgW , 0]
+    downRight = [imgW*0.2 , imgH]
+    downLeft = [imgW*0.8, corners[3][1]]
+    movePoint = np.float32([upRight, upLeft, downRight, downLeft])
+    textmove(movePoint, beforeImg, 40) #移動先座標，移動前座標，フレーム数
+    beforeImg = movePoint #座標の更新
+
+    cv2.waitKey(0)
+    return
+
+
+def textmove(movePoint, beforeImg, fream):#移動先座標，移動前座標，フレーム数
+    mv = movePoint - beforeImg
+    oneMv = mv/fream
+    for f in range(fream):
+        per_c = np.float32(beforeImg + oneMv*f)
+        mat_c = cv2.getPerspectiveTransform(per2, per_c)
+        chars_scene = cv2.warpPerspective(chars, mat_c, (imgW, imgH))
+        # 背景シーンに挿入
+        scene = back.copy()
+        for i in range(3):
+            scene_i, charsS_i = scene[:, :, i], chars_scene[:, :, i]
+            scene_i[charsS_i != 0] = charsS_i[charsS_i != 0]
+            scene[:, :, i] = scene_i
+        cv2.imshow("scene", scene)
+        cv2.waitKey(1)
+    return
 
 
 
